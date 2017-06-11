@@ -1,36 +1,35 @@
 package incenc
 
+// Decoder decodes incremental encoded things.
 type Decoder struct {
-	data []byte
+	scratch []byte
 }
 
-func NewDecoder(data []byte) *Decoder {
+// NewDecoder returns an incremental decoder.
+func NewDecoder() *Decoder {
+	return NewDecoderWith(nil)
+}
+
+// NewDecoderWith returns a new incremental decoder using the scratch buf.
+func NewDecoderWith(scratch []byte) *Decoder {
 	return &Decoder{
-		data: data,
+		scratch: scratch[:0],
 	}
 }
 
-func (d *Decoder) Iterate(buf []byte, cb func([]byte)) {
-	if buf != nil {
-		buf = buf[:0]
+// Next consumes the next value out of in, returns it as out, and the value as
+// value. Value is only valid until the next call to Next.
+func (d *Decoder) Next(in []byte) (out, value []byte) {
+	plen, amount := readVarint(in)
+	in = in[amount:]
+
+	d.scratch = d.scratch[:plen]
+
+	for in[0] > 0 {
+		d.scratch = append(d.scratch, in[0])
+		in = in[1:]
 	}
+	in = in[1:]
 
-	for len(d.data) > 0 {
-		plen, amount := readVarint(d.data)
-		d.data = d.data[amount:]
-
-		buf = buf[:plen]
-		for len(d.data) > 0 {
-			b := d.data[0]
-			d.data = d.data[1:]
-
-			if b == 0 {
-				break
-			}
-
-			buf = append(buf, b)
-		}
-
-		cb(buf)
-	}
+	return in, d.scratch
 }

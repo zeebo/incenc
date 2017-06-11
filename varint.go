@@ -1,7 +1,7 @@
 package incenc
 
-// readVarint reads an encoded signed integer from the byte buffer, and returns
-// the integer and number of bytes read
+// readVarint reads an encoded unsigned integer from the byte buffer, and
+// returns the integer and number of bytes read
 func readVarint(r []byte) (x uint16, n int) {
 	b := r[0]
 	if b < 128 {
@@ -10,6 +10,8 @@ func readVarint(r []byte) (x uint16, n int) {
 	return uint16(b&127) | uint16(r[1])<<7, 2
 }
 
+// writeVarint writes an encoded unsigned integer to the byte buffer and
+// returns the number of bytes written.
 func writeVarint(r []byte, x uint16) int {
 	r[0] = byte(x)
 	if x < 128 {
