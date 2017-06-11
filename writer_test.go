@@ -5,14 +5,14 @@ import (
 	"testing"
 )
 
-func TestEncode(t *testing.T) {
+func TestWriter(t *testing.T) {
 	var buf []byte
-	e := NewEncoder()
+	var w Writer
 
-	buf = e.Append(buf, "hello")
-	buf = e.Append(buf, "hello.world")
+	buf = w.Append(buf, "hello")
+	buf = w.Append(buf, "hello.world")
 
-	exp := []byte("\x00hello\x00\x05.world\x00")
+	exp := []byte("\x00\x05hello\x05\x06.world")
 
 	if !bytes.Equal(exp, buf) {
 		t.Errorf("exp: %x", exp)
@@ -21,14 +21,14 @@ func TestEncode(t *testing.T) {
 }
 
 func encodeCorpus(buf []byte) []byte {
-	e := NewEncoder()
+	var w Writer
 	for _, v := range corpus {
-		buf = e.Append(buf, v)
+		buf = w.Append(buf, v)
 	}
 	return buf
 }
 
-func BenchmarkEncode(b *testing.B) {
+func BenchmarkWriter(b *testing.B) {
 	buf := make([]byte, 1<<20)
 	b.SetBytes(int64(corpusLength))
 	b.ReportAllocs()

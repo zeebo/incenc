@@ -27,6 +27,37 @@ func TestCommonPrefix(t *testing.T) {
 	}
 }
 
+func TestReaderWriter(t *testing.T) {
+	var (
+		buf []byte
+		r   Reader
+		w   Writer
+	)
+
+	buf = w.Append(buf, "hello")
+	buf = w.Append(buf, "hello.world")
+	buf = w.Append(buf, "hello.woopy")
+
+	buf, value := r.Next(buf)
+	if string(value) != "hello" {
+		t.FailNow()
+	}
+
+	buf, value = r.Next(buf)
+	if string(value) != "hello.world" {
+		t.FailNow()
+	}
+
+	buf, value = r.Next(buf)
+	if string(value) != "hello.woopy" {
+		t.FailNow()
+	}
+
+	if len(buf) != 0 {
+		t.FailNow()
+	}
+}
+
 var corpusLength int
 
 func init() {

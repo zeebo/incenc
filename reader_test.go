@@ -2,19 +2,18 @@ package incenc
 
 import "testing"
 
-func TestDecode(t *testing.T) {
-	data := []byte("\x00hello\x00\x05.world\x00")
+func TestReader(t *testing.T) {
+	data := []byte("\x00\x05hello\x05\x06.world")
 	var value []byte
-
-	d := NewDecoder()
+	var r Reader
 
 	for len(data) > 0 {
-		data, value = d.Next(data)
-		t.Logf("%s", value)
+		data, value = r.Next(data)
+		t.Logf("%s: %x", value, value)
 	}
 }
 
-func BenchmarkDecode(b *testing.B) {
+func BenchmarkReader(b *testing.B) {
 	scratch := make([]byte, 256)
 	buf := encodeCorpus(nil)
 	b.SetBytes(int64(len(buf)))
@@ -23,9 +22,10 @@ func BenchmarkDecode(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		in := buf
-		d := NewDecoderWith(scratch)
+		r := Reader{Scratch: scratch}
+
 		for len(in) > 0 {
-			in, _ = d.Next(in)
+			in, _ = r.Next(in)
 		}
 	}
 }
