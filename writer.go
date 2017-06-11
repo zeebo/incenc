@@ -5,6 +5,11 @@ type Writer struct {
 	last string
 }
 
+// Reset clears the state of the Writer.
+func (w *Writer) Reset() {
+	w.last = ""
+}
+
 // Append appends the value to the buf using the last value as state for
 // reducing the amount of data needed to be written.
 func (w *Writer) Append(buf []byte, value string) []byte {
