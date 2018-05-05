@@ -17,38 +17,25 @@ func (w *Writer) Copy() *Writer {
 
 // Append appends the value to the buf using the last value as state for
 // reducing the amount of data needed to be written.
-func (w *Writer) Append(buf []byte, value string) []byte {
+func (w *Writer) Append(buf []byte, value string) ([]byte, error) {
 	// figure out how many bytes to use of last value
-	prefix_len := commonPrefix(value, w.last)
-	value_len := len(value) - prefix_len
+	prefix_len, suffix := findSuffix(w.last, value)
+	suffix_len := len(suffix)
 
-	// compute sizes of varints
-	prefix_varint := 1 + (prefix_len >> 7)
-	value_varint := 1 + (len(value) >> 7)
-
-	// figure out the range of the buffer we'll be using
-	start := len(buf)
-	end := start + prefix_varint + value_varint + value_len
-
-	// allocate more space if necessary
-	if end >= cap(buf) {
-		newb := make([]byte, len(buf), end+len(buf))
-		copy(newb, buf)
-		buf = newb[:end]
-	} else {
-		buf = buf[:end]
+	if prefix_len > 1<<15 || suffix_len > 1<<15 || prefix_len < 0 {
+		return nil, Error.New("value too large: %q", value)
 	}
 
-	writeVarint(buf[start:], uint16(prefix_len))
-	writeVarint(buf[start+prefix_varint:], uint16(value_len))
-	copy(buf[start+prefix_varint+value_varint:], value[prefix_len:])
+	buf = writeVarint(buf, uint16(prefix_len))
+	buf = writeVarint(buf, uint16(suffix_len))
+	buf = append(buf, suffix...)
 
 	w.last = value
-	return buf
+	return buf, nil
 }
 
 // AppendBytes is like Append except the value is a []byte instead of a string.
-func (w *Writer) AppendBytes(buf []byte, value []byte) []byte {
+func (w *Writer) AppendBytes(buf []byte, value []byte) ([]byte, error) {
 	// TODO(jeff): man go has some problems with []byte and string. jeeze.
 	// we can avoid this allocation at the cost of a bunch of duplication,
 	// or we can avoid the duplication at the cost of this allocation. i don't

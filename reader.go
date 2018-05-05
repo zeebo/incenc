@@ -2,20 +2,44 @@ package incenc
 
 // Reader decodes incremental encoded things.
 type Reader struct {
-	Scratch []byte
+	scratch []byte
+}
+
+// NewReaderWith constructs a reader using the provided scratch space.
+func NewReaderWith(scratch []byte) *Reader {
+	return &Reader{scratch: scratch[:0]}
 }
 
 // Next consumes the next value out of in, returns it as out, and the value as
 // value. Value is only valid until the next call to Next.
-func (r *Reader) Next(in []byte) (out, value []byte) {
-	prefix_len, size_1 := readVarint(in)
-	value_len, size_2 := readVarint(in[size_1:])
+func (r *Reader) Next(in []byte) (out, value []byte, err error) {
+	in, prefix_len, err := readVarint(in)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	start := size_1 + size_2
-	end := start + int(value_len)
+	in, value_len, err := readVarint(in)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	r.Scratch = r.Scratch[:prefix_len]
-	r.Scratch = append(r.Scratch, in[start:end]...)
+	in, suffix, err := consume(in, int(value_len))
+	if err != nil {
+		return nil, nil, err
+	}
 
-	return in[end:], r.Scratch
+	// we read once to avoid having to worry about write barriers when updating
+	// the slice.
+	scratch := r.scratch
+
+	_, scratch, err = consume(scratch, int(prefix_len))
+	if err != nil {
+		return nil, nil, err
+	}
+	scratch = append(scratch, suffix...)
+
+	// save the appended value for the next call.
+	r.scratch = scratch
+
+	return in, scratch, nil
 }

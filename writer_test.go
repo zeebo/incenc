@@ -9,8 +9,8 @@ func TestWriter(t *testing.T) {
 	var buf []byte
 	var w Writer
 
-	buf = w.Append(buf, "hello")
-	buf = w.Append(buf, "hello.world")
+	buf, _ = w.Append(buf, "hello")
+	buf, _ = w.Append(buf, "hello.world")
 
 	exp := []byte("\x00\x05hello\x05\x06.world")
 
@@ -18,14 +18,6 @@ func TestWriter(t *testing.T) {
 		t.Errorf("exp: %x", exp)
 		t.Errorf("got: %x", buf)
 	}
-}
-
-func encodeCorpus(buf []byte) []byte {
-	var w Writer
-	for _, v := range corpus {
-		buf = w.Append(buf, v)
-	}
-	return buf
 }
 
 func BenchmarkWriter(b *testing.B) {

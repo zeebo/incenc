@@ -2,27 +2,52 @@ package incenc
 
 import "testing"
 
-func TestCommonPrefix(t *testing.T) {
+func assertNoError(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("%+v", err)
+	}
+}
+
+func TestFindSuffix(t *testing.T) {
 	cases := []struct {
-		left, right string
-		same        int
+		last, value string
+		expect      string
 	}{
-		{"foobar", "foo", 3},
-		{"", "lol", 0},
-		{"some letters", "some other", 5},
+		{"foo", "foobar", "bar"},
+		{"", "lol", "lol"},
+		{"some letters", "some other", "other"},
 	}
 
 	for i, test := range cases {
-		got := commonPrefix(test.left, test.right)
-		if got != test.same {
-			t.Errorf("%d: commonPrefix(%q, %q) = %d instead of %d",
-				i, test.left, test.right, got, test.same)
+		_, got := findSuffix(test.last, test.value)
+		if got != test.expect {
+			t.Errorf("%d: findSuffix(%q, %q) = %q instead of %q",
+				i, test.last, test.value, got, test.expect)
 		}
+	}
+}
 
-		got = commonPrefix(test.right, test.left)
-		if got != test.same {
-			t.Errorf("%d: commonPrefix(%q, %q) = %d instead of %d",
-				i, test.right, test.left, got, test.same)
+func TestVarint(t *testing.T) {
+	for i := 0; i < 32768; i++ {
+		var buf [2]byte
+		data := writeVarint(buf[:0], uint16(i))
+		if i < 128 && len(data) != 1 {
+			t.Errorf("%x", buf)
+			t.Errorf("%v", buf)
+			t.Fatal(i, "wrote too many bytes")
+		}
+		data, x, err := readVarint(buf[:])
+		assertNoError(t, err)
+		if i < 128 && len(data) != 1 {
+			t.Errorf("%x", buf)
+			t.Errorf("%v", buf)
+			t.Fatal(i, "read too many bytes")
+		}
+		if int(x) != i {
+			t.Errorf("%x", buf)
+			t.Errorf("%v", buf)
+			t.Fatal(i, "failed to round trip", x)
 		}
 	}
 }
@@ -34,21 +59,24 @@ func TestReaderWriter(t *testing.T) {
 		w   Writer
 	)
 
-	buf = w.Append(buf, "hello")
-	buf = w.Append(buf, "hello.world")
-	buf = w.Append(buf, "hello.woopy")
+	buf, _ = w.Append(buf, "hello")
+	buf, _ = w.Append(buf, "hello.world")
+	buf, _ = w.Append(buf, "hello.woopy")
 
-	buf, value := r.Next(buf)
+	buf, value, err := r.Next(buf)
+	assertNoError(t, err)
 	if string(value) != "hello" {
 		t.FailNow()
 	}
 
-	buf, value = r.Next(buf)
+	buf, value, err = r.Next(buf)
+	assertNoError(t, err)
 	if string(value) != "hello.world" {
 		t.FailNow()
 	}
 
-	buf, value = r.Next(buf)
+	buf, value, err = r.Next(buf)
+	assertNoError(t, err)
 	if string(value) != "hello.woopy" {
 		t.FailNow()
 	}
@@ -64,6 +92,14 @@ func init() {
 	for _, v := range corpus {
 		corpusLength += len(v)
 	}
+}
+
+func encodeCorpus(buf []byte) []byte {
+	var w Writer
+	for _, v := range corpus {
+		buf, _ = w.Append(buf, v)
+	}
+	return buf
 }
 
 var corpus = []string{
