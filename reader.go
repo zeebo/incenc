@@ -6,8 +6,13 @@ type Reader struct {
 }
 
 // NewReaderWith constructs a reader using the provided scratch space.
-func NewReaderWith(scratch []byte) *Reader {
-	return &Reader{scratch: scratch[:0]}
+func NewReaderWith(scratch []byte) Reader {
+	return Reader{scratch: scratch[:0]}
+}
+
+// Reset clears the state of the Reader.
+func (r *Reader) Reset() {
+	r.scratch = r.scratch[:0]
 }
 
 // Next consumes the next value out of in, returns it as out, and the value as
